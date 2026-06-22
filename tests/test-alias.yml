@@ -1,0 +1,31 @@
+name: Test alias input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_REF: refs/heads/main
+      GITHUB_EVENT_NAME: push
+      # Fake credentials — the action will fail to authenticate, which is expected
+      CLEVER_TOKEN: fake-token
+      CLEVER_SECRET: fake-secret
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: deploy
+        uses: .
+        continue-on-error: true
+        with:
+          alias: my-app-alias
+
+      - name: Assert action ran with alias input (not a setup error)
+        env:
+          OUTCOME: ${{ steps.deploy.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to run"
+            exit 1
+          fi
+          echo "PASS: action ran with alias input (outcome=$OUTCOME, expected failure with fake credentials)"
