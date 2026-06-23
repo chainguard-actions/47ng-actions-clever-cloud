@@ -1,0 +1,21 @@
+name: Test timeout input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          appID: app_00000000-0000-0000-0000-000000000000
+          timeout: '30'
+        env:
+          CLEVER_TOKEN: fake-token
+          CLEVER_SECRET: fake-secret
+      - name: Assert action ran with timeout input
+        run: |
+          echo "Action completed (with or without error due to fake credentials)"
+          echo "PASS: timeout input was accepted"

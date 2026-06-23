@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    // Type checking
+    "strict": true,
+
+    // Modules
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "rootDir": "./src",
+
+    // Language & Environment
+    "target": "ES2018",
+
+    // Emit
+    "outDir": "./dist",
+    "noEmit": false,
+    "declaration": false,
+    "downlevelIteration": false,
+
+    // Interop
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Misc
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true
+  },
+  "exclude": ["node_modules", "**/*.test.ts"]
+}
