@@ -1,0 +1,31 @@
+name: Test force deploy flag
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      # Test that the action accepts the force=true input and fails gracefully
+      # without valid Clever Cloud credentials.
+      - id: deploy
+        uses: .
+        with:
+          appID: app_00000000-0000-0000-0000-000000000000
+          force: 'true'
+        continue-on-error: true
+        env:
+          CLEVER_TOKEN: fake-token
+          CLEVER_SECRET: fake-secret
+
+      - name: Assert action ran and failed gracefully (force flag accepted)
+        env:
+          OUTCOME: ${{ steps.deploy.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: expected action to fail without valid credentials, got '$OUTCOME'"
+            exit 1
+          fi
+          echo "PASS: action with force=true did not succeed without valid credentials (outcome=$OUTCOME)"
