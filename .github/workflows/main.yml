@@ -1,0 +1,215 @@
+name: CI/CD
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  release:
+    types: [created, published, edited]
+  push:
+    branches:
+      - master
+      - "releases/*"
+
+permissions: {}
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --ignore-scripts
+      - name: Check version consistency
+        run: |
+          set +e # We want to handle errors ourselves to provide better messages
+          PACKAGE_VERSION=$(jq -r '
+            .version |
+            if test("^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?(\\+[0-9A-Za-z.-]+)?$")
+            then .
+            else error("Invalid semver format in package.json")
+            end
+          ' package.json 2>&1)
+          JQ_EXIT_CODE=$?
+
+          if [ $JQ_EXIT_CODE -ne 0 ]; then
+            echo "::error::Invalid semver version in package.json"
+            exit 2
+          fi
+
+          ACTION_TAG=$(grep 'image: docker://ghcr.io' action.yml | sed 's/.*://g' | grep -Eo '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$')
+          GREP_EXIT_CODE=$?
+          set -e # Re-enable exit on error
+
+          if [ $GREP_EXIT_CODE -ne 0 ] || [ -z "$ACTION_TAG" ]; then
+            echo "::error::Invalid or missing version format in action.yml"
+            exit 3
+          fi
+
+          if [ "$PACKAGE_VERSION" != "$ACTION_TAG" ]; then
+            echo "::error::Version mismatch! package.json has $PACKAGE_VERSION but action.yml has $ACTION_TAG"
+            exit 4
+          fi
+
+          echo "✅ Versions match: $PACKAGE_VERSION"
+      - name: Run knip
+        run: pnpm run knip
+
+  ci:
+    name: Integration
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --ignore-scripts
+      - name: Run integration tests
+        run: pnpm run test
+
+  cd:
+    name: Deployment
+    # Only run for push events (master, releases) and releases
+    if: github.event_name != 'pull_request'
+    needs: [ci, lint]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      - name: Get Git SHA
+        id: sha
+        env:
+          GIT_SHA: ${{ github.sha }}
+        run: |
+          safe=$(printf '%s' "$GIT_SHA" | tr -d '\n\r')
+          echo "sha=$safe" >> "$GITHUB_OUTPUT"
+      - name: Get Docker tag
+        id: docker-tag
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          ref=$(printf '%s' "$REF_NAME" | tr -d '\n\r')
+          tag=$(                        \
+            echo "$ref"                 \
+            | sed 's#refs/heads/##g'    \
+            | sed 's#refs/tags/##g'     \
+            | tr '/' '_'                \
+            | tr -d '#'                 \
+          )
+          if [ "$tag" == "master" ]; then
+            tag="latest"
+          fi
+          safe_tag=$(printf '%s' "$tag" | tr -d '\n\r')
+          echo "tag=$safe_tag" >> "$GITHUB_OUTPUT"
+      - id: package
+        run: |
+          VERSION=$(jq -r '
+            .version |
+            if test("^[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-ZaZ.-]+)?(\\+[0-9A-ZaZ.-]+)?$")
+            then .
+            else error("Invalid semver format in package.json")
+            end
+          ' package.json 2>&1)
+
+          if [ $? -ne 0 ]; then
+            echo "::error::$VERSION" # Expand the error into an annotation
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Collect Docker labels & tags
+        id: docker-labels-tags
+        env:
+          PKG_VERSION: ${{ steps.package.outputs.version }}
+          GIT_SHA: ${{ steps.sha.outputs.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          REF_NAME: ${{ github.ref_name }}
+          DOCKER_TAG: ${{ steps.docker-tag.outputs.tag }}
+        run: |
+          pkg_version=$(printf '%s' "$PKG_VERSION" | tr -d '\n\r')
+          git_sha=$(printf '%s' "$GIT_SHA" | tr -d '\n\r')
+          repository=$(printf '%s' "$REPOSITORY" | tr -d '\n\r')
+          run_id=$(printf '%s' "$RUN_ID" | tr -d '\n\r')
+          ref_name=$(printf '%s' "$REF_NAME" | tr -d '\n\r')
+          docker_tag=$(printf '%s' "$DOCKER_TAG" | tr -d '\n\r')
+          echo 'labels<<__LABELS_EOF__' >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.title=47ng/actions-clever-cloud" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.description=GitHub action to deploy to Clever Cloud" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.version=$pkg_version" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.revision=$git_sha" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.licenses=MIT" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.source=https://github.com/$repository/tree/$git_sha" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.documentation=https://github.com/$repository/blob/master/packages/server/README.md" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.url=https://github.com/$repository/actions/runs/$run_id" >> "$GITHUB_OUTPUT"
+          echo '__LABELS_EOF__' >> "$GITHUB_OUTPUT"
+          echo 'tags<<__TAGS_EOF__' >> "$GITHUB_OUTPUT"
+          if [ "$ref_name" == "master" ]; then
+            echo "ghcr.io/47ng/actions-clever-cloud:$pkg_version" >> "$GITHUB_OUTPUT"
+            echo "47ng/actions-clever-cloud:$pkg_version" >> "$GITHUB_OUTPUT"
+          fi
+          echo "ghcr.io/47ng/actions-clever-cloud:$docker_tag" >> "$GITHUB_OUTPUT"
+          echo "ghcr.io/47ng/actions-clever-cloud:git-$git_sha" >> "$GITHUB_OUTPUT"
+          echo "47ng/actions-clever-cloud:$docker_tag" >> "$GITHUB_OUTPUT"
+          echo "47ng/actions-clever-cloud:git-$git_sha" >> "$GITHUB_OUTPUT"
+          echo '__TAGS_EOF__' >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v4.1.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+      - name: Login to Docker Hub
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        id: docker-build-push
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: .
+          labels: "${{ steps.docker-labels-tags.outputs.labels }}"
+          tags: "${{ steps.docker-labels-tags.outputs.tags }}"
+          push: true
+      - name: Generate step summary
+        env:
+          DIGEST: ${{ steps.docker-build-push.outputs.digest }}
+          TAGS: ${{ steps.docker-labels-tags.outputs.tags }}
+          LABELS: ${{ steps.docker-labels-tags.outputs.labels }}
+        run: |
+          echo "## 🐳 &nbsp;Docker image" >> "$GITHUB_STEP_SUMMARY"
+          echo "Digest: \`$DIGEST\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 📌 &nbsp;Tags" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "$TAGS" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 🏷 &nbsp;Labels" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "$LABELS" >> "$GITHUB_STEP_SUMMARY"
+          echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"

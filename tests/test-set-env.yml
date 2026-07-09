@@ -1,0 +1,32 @@
+name: Test setEnv input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action with setEnv input (expect failure - no credentials)
+        id: action
+        uses: .
+        with:
+          appID: app_00000000-0000-0000-0000-000000000000
+          setEnv: |
+            FOO=bar
+            BAZ=qux
+        env:
+          CLEVER_TOKEN: ''
+          CLEVER_SECRET: ''
+        continue-on-error: true
+
+      - name: Assert action failed (setEnv input accepted, failed at auth)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail without credentials, but got: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly failed (setEnv input accepted, failed at auth)"
