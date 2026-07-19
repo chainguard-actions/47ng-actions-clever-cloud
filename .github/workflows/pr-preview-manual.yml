@@ -177,23 +177,23 @@ jobs:
           RUN_ID: ${{ github.run_id }}
         run: |
           IMAGE="ghcr.io/47ng/actions-clever-cloud"
-          head_sha=$(printf '%s' "$HEAD_SHA" | tr -d '\n\r')
-          pr_number=$(printf '%s' "$PR_NUMBER" | tr -d '\n\r')
-          fork=$(printf '%s' "$FORK" | tr -d '\n\r')
-          repo=$(printf '%s' "$REPO" | tr -d '\n\r')
-          run_id=$(printf '%s' "$RUN_ID" | tr -d '\n\r')
+          safe_head_sha=$(printf '%s' "$HEAD_SHA" | tr -d '\n\r')
+          safe_pr_number=$(printf '%s' "$PR_NUMBER" | tr -d '\n\r')
+          safe_fork=$(printf '%s' "$FORK" | tr -d '\n\r')
+          safe_repo=$(printf '%s' "$REPO" | tr -d '\n\r')
+          safe_run_id=$(printf '%s' "$RUN_ID" | tr -d '\n\r')
           {
             echo "tags<<__TAGS_EOF__"
-            echo "${IMAGE}:pr-${pr_number}"
-            echo "${IMAGE}:git-${head_sha}"
+            echo "${IMAGE}:pr-${safe_pr_number}"
+            echo "${IMAGE}:git-${safe_head_sha}"
             echo "__TAGS_EOF__"
             echo "labels<<__LABELS_EOF__"
-            echo "org.opencontainers.image.title=${repo} (PR preview, unreviewed)"
+            echo "org.opencontainers.image.title=${safe_repo} (PR preview, unreviewed)"
             echo "org.opencontainers.image.description=Manual fork PR preview build of unreviewed third-party code. Do not use in trusted contexts."
-            echo "org.opencontainers.image.revision=${head_sha}"
-            echo "org.opencontainers.image.source=https://github.com/${fork}/tree/${head_sha}"
-            echo "org.opencontainers.image.documentation=https://github.com/${repo}/pull/${pr_number}"
-            echo "org.opencontainers.image.url=https://github.com/${repo}/actions/runs/${run_id}"
+            echo "org.opencontainers.image.revision=${safe_head_sha}"
+            echo "org.opencontainers.image.source=https://github.com/${safe_fork}/tree/${safe_head_sha}"
+            echo "org.opencontainers.image.documentation=https://github.com/${safe_repo}/pull/${safe_pr_number}"
+            echo "org.opencontainers.image.url=https://github.com/${safe_repo}/actions/runs/${safe_run_id}"
             echo "org.opencontainers.image.licenses=MIT"
             echo "__LABELS_EOF__"
           } >> "$GITHUB_OUTPUT"

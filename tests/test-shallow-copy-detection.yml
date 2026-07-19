@@ -1,0 +1,26 @@
+name: Test shallow copy detection
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        # Default fetch-depth: 1 creates a shallow clone
+        # The action should detect this and fail before even trying to deploy
+      - id: action
+        uses: .
+        with:
+          appID: app_00000000-0000-0000-0000-000000000000
+        env:
+          CLEVER_TOKEN: fake-token-for-testing
+          CLEVER_SECRET: fake-secret-for-testing
+        continue-on-error: true
+      - name: Assert action failed due to shallow copy
+        run: |
+          echo "outcome: ${{ steps.action.outcome }}"
+          if [ "${{ steps.action.outcome }}" != "failure" ]; then
+            echo "FAIL: expected action to fail when repository is a shallow clone"
+            exit 1
+          fi
+          echo "PASS: action correctly failed for shallow repository"

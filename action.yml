@@ -56,4 +56,4 @@ inputs:
       If not set, the Clever Cloud CLI default (error) will be used.
 runs:
   using: docker
-  image: docker://ghcr.io/47ng/actions-clever-cloud@sha256:c374d7bc5e669d01d1d76eaa17bc9645994825f5d3928b2accf1117a8b310029 # 2.1.1
+  image: docker://ghcr.io/47ng/actions-clever-cloud:2.1.1@sha256:c374d7bc5e669d01d1d76eaa17bc9645994825f5d3928b2accf1117a8b310029

@@ -42,16 +42,16 @@ jobs:
         env:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          safe=$(printf '%s' "$PR_HEAD_SHA" | tr -d '\n\r')
-          echo "sha=$safe" >> "$GITHUB_OUTPUT"
+          safe_sha=$(printf '%s' "$PR_HEAD_SHA" | tr -d '\n\r')
+          echo "sha=$safe_sha" >> "$GITHUB_OUTPUT"
 
       - name: Get Docker tag
         id: docker-tag
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          safe=$(printf '%s' "$PR_NUMBER" | tr -d '\n\r')
-          echo "tag=pr-$safe" >> "$GITHUB_OUTPUT"
+          safe_pr_number=$(printf '%s' "$PR_NUMBER" | tr -d '\n\r')
+          echo "tag=pr-$safe_pr_number" >> "$GITHUB_OUTPUT"
 
       - name: Get package version
         id: package
@@ -77,29 +77,29 @@ jobs:
           PKG_VERSION: ${{ steps.package.outputs.version }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           GIT_SHA: ${{ steps.sha.outputs.sha }}
-          REPOSITORY: ${{ github.repository }}
-          RUN_ID: ${{ github.run_id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           DOCKER_TAG: ${{ steps.docker-tag.outputs.tag }}
         run: |
-          pkg_version=$(printf '%s' "$PKG_VERSION" | tr -d '\n\r')
-          pr_number=$(printf '%s' "$PR_NUMBER" | tr -d '\n\r')
-          git_sha=$(printf '%s' "$GIT_SHA" | tr -d '\n\r')
-          repository=$(printf '%s' "$REPOSITORY" | tr -d '\n\r')
-          run_id=$(printf '%s' "$RUN_ID" | tr -d '\n\r')
-          docker_tag=$(printf '%s' "$DOCKER_TAG" | tr -d '\n\r')
+          safe_pkg_version=$(printf '%s' "$PKG_VERSION" | tr -d '\n\r')
+          safe_pr_number=$(printf '%s' "$PR_NUMBER" | tr -d '\n\r')
+          safe_sha=$(printf '%s' "$GIT_SHA" | tr -d '\n\r')
+          safe_repo=$(printf '%s' "$GITHUB_REPOSITORY" | tr -d '\n\r')
+          safe_run_id=$(printf '%s' "$GITHUB_RUN_ID" | tr -d '\n\r')
+          safe_docker_tag=$(printf '%s' "$DOCKER_TAG" | tr -d '\n\r')
           echo 'labels<<__LABELS_EOF__' >> "$GITHUB_OUTPUT"
           echo "org.opencontainers.image.title=47ng/actions-clever-cloud" >> "$GITHUB_OUTPUT"
           echo "org.opencontainers.image.description=GitHub action to deploy to Clever Cloud (PR preview)" >> "$GITHUB_OUTPUT"
-          echo "org.opencontainers.image.version=$pkg_version-pr.$pr_number" >> "$GITHUB_OUTPUT"
-          echo "org.opencontainers.image.revision=$git_sha" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.version=$safe_pkg_version-pr.$safe_pr_number" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.revision=$safe_sha" >> "$GITHUB_OUTPUT"
           echo "org.opencontainers.image.licenses=MIT" >> "$GITHUB_OUTPUT"
-          echo "org.opencontainers.image.source=https://github.com/$repository/tree/$git_sha" >> "$GITHUB_OUTPUT"
-          echo "org.opencontainers.image.documentation=https://github.com/$repository/pull/$pr_number" >> "$GITHUB_OUTPUT"
-          echo "org.opencontainers.image.url=https://github.com/$repository/actions/runs/$run_id" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.source=https://github.com/$safe_repo/tree/$safe_sha" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.documentation=https://github.com/$safe_repo/pull/$safe_pr_number" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.url=https://github.com/$safe_repo/actions/runs/$safe_run_id" >> "$GITHUB_OUTPUT"
           echo '__LABELS_EOF__' >> "$GITHUB_OUTPUT"
           echo 'tags<<__TAGS_EOF__' >> "$GITHUB_OUTPUT"
-          echo "ghcr.io/47ng/actions-clever-cloud:$docker_tag" >> "$GITHUB_OUTPUT"
-          echo "ghcr.io/47ng/actions-clever-cloud:git-$git_sha" >> "$GITHUB_OUTPUT"
+          echo "ghcr.io/47ng/actions-clever-cloud:$safe_docker_tag" >> "$GITHUB_OUTPUT"
+          echo "ghcr.io/47ng/actions-clever-cloud:git-$safe_sha" >> "$GITHUB_OUTPUT"
           echo '__TAGS_EOF__' >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU

@@ -101,14 +101,14 @@ jobs:
         env:
           GIT_SHA: ${{ github.sha }}
         run: |
-          safe=$(printf '%s' "$GIT_SHA" | tr -d '\n\r')
-          echo "sha=$safe" >> "$GITHUB_OUTPUT"
+          safe_sha=$(printf '%s' "$GIT_SHA" | tr -d '\n\r')
+          echo "sha=$safe_sha" >> "$GITHUB_OUTPUT"
       - name: Get Docker tag
         id: docker-tag
         env:
           REF_NAME: ${{ github.ref_name }}
         run: |
-          ref=$(printf '%s' "$REF_NAME" | tr -d '\n\r')
+          ref="$REF_NAME"
           tag=$(                        \
             echo "$ref"                 \
             | sed 's#refs/heads/##g'    \
@@ -142,36 +142,36 @@ jobs:
         env:
           PKG_VERSION: ${{ steps.package.outputs.version }}
           GIT_SHA: ${{ steps.sha.outputs.sha }}
-          REPOSITORY: ${{ github.repository }}
-          RUN_ID: ${{ github.run_id }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
           REF_NAME: ${{ github.ref_name }}
           DOCKER_TAG: ${{ steps.docker-tag.outputs.tag }}
         run: |
-          pkg_version=$(printf '%s' "$PKG_VERSION" | tr -d '\n\r')
-          git_sha=$(printf '%s' "$GIT_SHA" | tr -d '\n\r')
-          repository=$(printf '%s' "$REPOSITORY" | tr -d '\n\r')
-          run_id=$(printf '%s' "$RUN_ID" | tr -d '\n\r')
-          ref_name=$(printf '%s' "$REF_NAME" | tr -d '\n\r')
-          docker_tag=$(printf '%s' "$DOCKER_TAG" | tr -d '\n\r')
+          safe_pkg_version=$(printf '%s' "$PKG_VERSION" | tr -d '\n\r')
+          safe_sha=$(printf '%s' "$GIT_SHA" | tr -d '\n\r')
+          safe_repo=$(printf '%s' "$GITHUB_REPOSITORY" | tr -d '\n\r')
+          safe_run_id=$(printf '%s' "$GITHUB_RUN_ID" | tr -d '\n\r')
+          safe_ref_name=$(printf '%s' "$REF_NAME" | tr -d '\n\r')
+          safe_docker_tag=$(printf '%s' "$DOCKER_TAG" | tr -d '\n\r')
           echo 'labels<<__LABELS_EOF__' >> "$GITHUB_OUTPUT"
           echo "org.opencontainers.image.title=47ng/actions-clever-cloud" >> "$GITHUB_OUTPUT"
           echo "org.opencontainers.image.description=GitHub action to deploy to Clever Cloud" >> "$GITHUB_OUTPUT"
-          echo "org.opencontainers.image.version=$pkg_version" >> "$GITHUB_OUTPUT"
-          echo "org.opencontainers.image.revision=$git_sha" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.version=$safe_pkg_version" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.revision=$safe_sha" >> "$GITHUB_OUTPUT"
           echo "org.opencontainers.image.licenses=MIT" >> "$GITHUB_OUTPUT"
-          echo "org.opencontainers.image.source=https://github.com/$repository/tree/$git_sha" >> "$GITHUB_OUTPUT"
-          echo "org.opencontainers.image.documentation=https://github.com/$repository/blob/master/packages/server/README.md" >> "$GITHUB_OUTPUT"
-          echo "org.opencontainers.image.url=https://github.com/$repository/actions/runs/$run_id" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.source=https://github.com/$safe_repo/tree/$safe_sha" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.documentation=https://github.com/$safe_repo/blob/master/packages/server/README.md" >> "$GITHUB_OUTPUT"
+          echo "org.opencontainers.image.url=https://github.com/$safe_repo/actions/runs/$safe_run_id" >> "$GITHUB_OUTPUT"
           echo '__LABELS_EOF__' >> "$GITHUB_OUTPUT"
           echo 'tags<<__TAGS_EOF__' >> "$GITHUB_OUTPUT"
-          if [ "$ref_name" == "master" ]; then
-            echo "ghcr.io/47ng/actions-clever-cloud:$pkg_version" >> "$GITHUB_OUTPUT"
-            echo "47ng/actions-clever-cloud:$pkg_version" >> "$GITHUB_OUTPUT"
+          if [ "$safe_ref_name" == "master" ]; then
+            echo "ghcr.io/47ng/actions-clever-cloud:$safe_pkg_version" >> "$GITHUB_OUTPUT"
+            echo "47ng/actions-clever-cloud:$safe_pkg_version" >> "$GITHUB_OUTPUT"
           fi
-          echo "ghcr.io/47ng/actions-clever-cloud:$docker_tag" >> "$GITHUB_OUTPUT"
-          echo "ghcr.io/47ng/actions-clever-cloud:git-$git_sha" >> "$GITHUB_OUTPUT"
-          echo "47ng/actions-clever-cloud:$docker_tag" >> "$GITHUB_OUTPUT"
-          echo "47ng/actions-clever-cloud:git-$git_sha" >> "$GITHUB_OUTPUT"
+          echo "ghcr.io/47ng/actions-clever-cloud:$safe_docker_tag" >> "$GITHUB_OUTPUT"
+          echo "ghcr.io/47ng/actions-clever-cloud:git-$safe_sha" >> "$GITHUB_OUTPUT"
+          echo "47ng/actions-clever-cloud:$safe_docker_tag" >> "$GITHUB_OUTPUT"
+          echo "47ng/actions-clever-cloud:git-$safe_sha" >> "$GITHUB_OUTPUT"
           echo '__TAGS_EOF__' >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
