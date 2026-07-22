@@ -1,6 +1,11 @@
 {
   "owner": "47ng",
   "repo": "actions-clever-cloud",
-  "version": "",
-  "url": "https://github.com/47ng/actions-clever-cloud"
+  "version": "v2.1.2",
+  "commit_sha": "6528b2e789639854f144c653a68538d7751c3a6f",
+  "url": "https://github.com/47ng/actions-clever-cloud",
+  "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
+  "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
+  "test_agent_version": "2",
+  "harden_agent_version": "2"
 }
