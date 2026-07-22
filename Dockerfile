@@ -1,0 +1,33 @@
+FROM node:24.9.0-slim AS builder
+
+# Note: when updating things that go into this Docker image (with COPY or RUN),
+# make sure to update the allow-list in the .github/workflows/pr-preview.yml
+# workflow `on.pull_request.paths` section, so it gets rebuilt when needed.
+
+WORKDIR /action
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+RUN corepack enable
+RUN pnpm install --frozen-lockfile --ignore-scripts
+COPY src ./src
+COPY tsconfig.json ./
+RUN pnpm build
+RUN rm -rf node_modules
+RUN pnpm install --frozen-lockfile --ignore-scripts --production
+
+# ---
+
+FROM node:24.9.0-slim AS final
+
+RUN apt update && apt install -y git
+
+# Provide defaults for boolean inputs so the parser doesn't complain
+ENV INPUT_QUIET=false
+ENV INPUT_FORCE=false
+
+COPY --from=builder /action/package.json /action/package.json
+COPY --from=builder /action/node_modules /action/node_modules
+COPY --from=builder /action/dist /action/dist
+
+CMD ["node", "/action/dist/main.js"]
