@@ -1,0 +1,60 @@
+name: Deploy to Clever Cloud
+description: Deploy your application to Clever Cloud
+author: François Best
+branding:
+  icon: upload-cloud
+  color: red
+inputs:
+  alias:
+    required: false
+    description: |
+      The alias of the application to deploy,
+      if you are using a .clever.json file.
+  appID:
+    required: false
+    description: |
+      The ID of your application (can be found in the Clever Cloud console).
+      Takes precedence over `alias` if both are defined.
+  force:
+    required: false
+    default: 'false'
+    description: |
+      Use true if you want to force deploy even if it's not fast-forwardable
+  timeout:
+    required: false
+    description: |
+      How long (in seconds) to wait at most before moving on.
+      This can help saving build minutes with very long deployments,
+      but you will lose any deployment failure information.
+  setEnv:
+    required: false
+    description: |
+      Extra environment variables to set on the application before deployment.
+      Values are separated by a newline character (\n), use a YAML literal block
+      scalar `|` to preserve newlines and separate multiple variables definitions.
+      (see https://github.com/47ng/actions-clever-cloud#extra-environment-variables)
+  deployPath:
+    required: false
+    description: |
+      Directory to run the Clever CLI from. This changes which .clever.json
+      is picked up; it does NOT restrict which files are deployed — the CLI
+      always pushes the git repository's HEAD.
+  logFile:
+    required: false
+    description: |
+      Path to a file where to store the deployment logs.
+  quiet:
+    required: false
+    default: 'false'
+    description: |
+      Don't print deployment output to the console. Use this in case your deployment
+      may reveal secrets or PII.
+  sameCommitPolicy:
+    required: false
+    description: |
+      What to do when local and remote commit are identical.
+      Possible values: error, ignore, restart, rebuild.
+      If not set, the Clever Cloud CLI default (error) will be used.
+runs:
+  using: docker
+  image: docker://ghcr.io/47ng/actions-clever-cloud:2.1.4@sha256:7c15fa682dff7e168f2eadb43417a1c9706f62d8185e68911420af3d997ef9e1 # x-release-please-version

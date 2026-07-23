@@ -1,0 +1,57 @@
+{
+  "name": "@47ng/actions-clever-cloud",
+  "version": "2.1.4",
+  "private": true,
+  "description": "GitHub Action to deploy to Clever Cloud",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/47ng/actions-clever-cloud.git"
+  },
+  "keywords": [
+    "actions",
+    "node",
+    "deploy",
+    "deployment",
+    "clever-cloud"
+  ],
+  "author": {
+    "name": "François Best",
+    "email": "contact@francoisbest.com",
+    "url": "https://francoisbest.com"
+  },
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "node --env-file=.env.local --watch ./src/main.ts",
+    "build": "tsdown src/main.ts --outDir dist --no-fixed-extension",
+    "test": "vitest --typecheck",
+    "knip": "knip"
+  },
+  "engines": {
+    "node": "^24.9.0"
+  },
+  "packageManager": "pnpm@11.10.0",
+  "dependencies": {
+    "@actions/core": "^3.0.1",
+    "@actions/exec": "^3.0.0",
+    "clever-tools": "^4.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "knip": "^6.25.0",
+    "prettier": "^3.9.4",
+    "tsdown": "^0.22.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.10"
+  },
+  "prettier": {
+    "printWidth": 80,
+    "tabWidth": 2,
+    "useTabs": false,
+    "semi": false,
+    "singleQuote": true,
+    "trailingComma": "none",
+    "arrowParens": "avoid"
+  }
+}
