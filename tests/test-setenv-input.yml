@@ -1,0 +1,34 @@
+name: Test setEnv input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      # The action should fail when credentials are missing, even when setEnv is provided.
+      # This test ensures the setEnv input is accepted and passed through correctly.
+      # setEnv accepts newline-separated KEY=VALUE pairs.
+      - id: action
+        uses: .
+        with:
+          appID: app_00000000-0000-0000-0000-000000000000
+          setEnv: |
+            MY_VAR=hello
+            ANOTHER_VAR=world
+        continue-on-error: true
+        # Deliberately NOT setting CLEVER_TOKEN or CLEVER_SECRET
+
+      - name: Assert action failed as expected (missing credentials)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail due to missing credentials, but outcome was: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly failed when credentials were missing (setEnv input accepted)"

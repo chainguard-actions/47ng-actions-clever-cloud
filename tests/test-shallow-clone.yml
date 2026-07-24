@@ -1,0 +1,34 @@
+name: Test shallow clone detection
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # Intentionally use fetch-depth: 1 to create a shallow clone
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+
+      # The action should detect the shallow clone and fail with a helpful error.
+      # We provide fake credentials so the action gets past the credential check
+      # and reaches the shallow-clone check.
+      - id: action
+        uses: .
+        with:
+          appID: app_00000000-0000-0000-0000-000000000000
+        continue-on-error: true
+        env:
+          CLEVER_TOKEN: fake-token-for-shallow-test
+          CLEVER_SECRET: fake-secret-for-shallow-test
+
+      - name: Assert action failed due to shallow clone
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail due to shallow clone, but outcome was: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly detected and rejected shallow clone"

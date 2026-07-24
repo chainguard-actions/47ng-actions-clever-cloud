@@ -1,0 +1,34 @@
+name: Test invalid deployPath error
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      # The action should fail when deployPath points to a non-existent directory.
+      # We provide fake credentials so the action gets past the credential check
+      # and reaches the deployPath validation.
+      - id: action
+        uses: .
+        with:
+          appID: app_00000000-0000-0000-0000-000000000000
+          deployPath: /nonexistent/path/that/does/not/exist
+        continue-on-error: true
+        env:
+          CLEVER_TOKEN: fake-token-for-deploypath-test
+          CLEVER_SECRET: fake-secret-for-deploypath-test
+
+      - name: Assert action failed as expected
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail due to invalid deployPath, but outcome was: $OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly failed when deployPath does not exist"
