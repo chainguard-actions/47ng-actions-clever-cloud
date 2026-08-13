@@ -1,4 +1,4 @@
-name: Test extraEnvSafelist input
+name: Test extraEnvSafelist input (deprecated)
 on:
   workflow_dispatch:
 jobs:
@@ -6,13 +6,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+
+      # The action requires real Clever Cloud credentials to succeed.
+      # We pass the deprecated extraEnvSafelist input and verify the action ran
+      # (fails due to missing credentials). This input is deprecated in favour of setEnv.
+      - id: deploy
         uses: .
-        continue-on-error: true
         with:
-          appID: app_00000000-0000-0000-0000-000000000000
+          appID: app-00000000-0000-0000-0000-000000000000
           extraEnvSafelist: MY_VAR,ANOTHER_VAR
-      - name: Assert action ran (credentials missing is expected)
+        continue-on-error: true
+        env:
+          CLEVER_TOKEN: fake-token
+          CLEVER_SECRET: fake-secret
+
+      - name: Assert action ran and failed gracefully (no credentials)
+        env:
+          OUTCOME: ${{ steps.deploy.outcome }}
         run: |
-          echo "Action completed (with or without error due to missing credentials)"
-          echo "PASS: extraEnvSafelist input was accepted"
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: expected action to fail without valid credentials, got '$OUTCOME'"
+            exit 1
+          fi
+          echo "PASS: action ran with extraEnvSafelist input and failed as expected (outcome=$OUTCOME)"

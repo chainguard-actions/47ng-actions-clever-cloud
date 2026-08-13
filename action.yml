@@ -51,4 +51,4 @@ inputs:
       to be set, see https://github.com/47ng/ations-clever-cloud#safelisting
 runs:
   using: docker
-  image: docker://47ng/actions-clever-cloud@sha256:ff3e4c49277f16b21b4f45bc98725d28982fe0f31150ae781634b2d400fe1098 # v1.3.1
+  image: docker://47ng/actions-clever-cloud:v1.3.1@sha256:ff3e4c49277f16b21b4f45bc98725d28982fe0f31150ae781634b2d400fe1098
