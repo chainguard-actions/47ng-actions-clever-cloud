@@ -1,4 +1,4 @@
-name: Test sameCommitPolicy input
+name: Test timeout input
 on:
   workflow_dispatch:
 jobs:
@@ -11,7 +11,7 @@ jobs:
         continue-on-error: true
         with:
           appID: app_00000000-0000-0000-0000-000000000000
-          sameCommitPolicy: ignore
+          timeout: '300'
       - name: Assert action ran (credentials missing expected)
         env:
           OUTCOME: ${{ steps.action.outcome }}
