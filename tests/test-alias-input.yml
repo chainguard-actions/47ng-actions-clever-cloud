@@ -1,4 +1,4 @@
-name: Test force deploy error handling
+name: Test alias input error handling
 on:
   workflow_dispatch:
 jobs:
@@ -10,8 +10,7 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          appID: app_00000000-0000-0000-0000-000000000000
-          force: 'true'
+          alias: my-app
           timeout: '10'
         env:
           CLEVER_TOKEN: ''
@@ -25,4 +24,4 @@ jobs:
             echo "FAIL: expected action to fail without credentials, got outcome=$OUTCOME"
             exit 1
           fi
-          echo "PASS: action correctly failed with force=true and no credentials"
+          echo "PASS: action correctly failed when using alias without credentials"
