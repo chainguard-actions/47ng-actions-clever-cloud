@@ -1,0 +1,58 @@
+name: CI/CD
+
+permissions:
+  contents: read
+
+on: # rebuild any PRs and main branch changes
+  pull_request:
+  release:
+    types: [created, published, edited]
+  push:
+    branches:
+      - master
+      - "releases/*"
+
+jobs:
+  ci:
+    name: Integration
+    runs-on: ubuntu-latest
+    steps:
+      - id: yarn-cache
+        name: Get Yarn cache path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+      - uses: actions/checkout@a81bbbf8298c0fa03ea29cdc473d45769f953675
+      - uses: actions/setup-node@56899e050abffc08c2b3b61f3ec6a79a9dc3223d
+        with:
+          node-version: 16.x
+      - uses: actions/cache@d1255ad9362389eac595a9ae406b8e8cb3331f16
+        name: Load Yarn cache
+        with:
+          path: ${{ steps.yarn-cache.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+      - run: yarn install --ignore-scripts
+        name: Install dependencies
+      - run: yarn ci
+        name: Run integration tests
+
+  cd:
+    name: Deployment
+    needs: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@a81bbbf8298c0fa03ea29cdc473d45769f953675
+      - uses: manusa/actions-publish-docker@db938e45d2a3487e0eab9646e83550f554c17af3
+        name: Build & publish Docker image
+        with:
+          name: 47ng/actions-clever-cloud
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          tag script: |
+            const tag = context.ref
+              .replace('refs/heads/', '')
+              .replace('refs/tags/', '')
+              .replace('refs/pull/', '')
+              .replace(/\//g, '_')
+              .replace(/#/g, '');
+            return tag === 'master' ? 'latest' : tag;

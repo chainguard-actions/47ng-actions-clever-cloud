@@ -1,4 +1,4 @@
-name: Test logFile input
+name: Test alias input
 on:
   workflow_dispatch:
 jobs:
@@ -18,15 +18,12 @@ jobs:
           git push "$GITHUB_WORKSPACE/.git-remote" HEAD:refs/heads/act-harness
           git remote set-url origin "$GITHUB_WORKSPACE/.git-remote" 2>/dev/null || \
             git remote add origin "$GITHUB_WORKSPACE/.git-remote"
-          # Create the logs directory so the action can write to it
-          mkdir -p "$GITHUB_WORKSPACE/logs"
 
-      - name: Run action with logFile input (expect failure due to missing credentials)
+      - name: Run action with alias input (expect failure due to missing credentials)
         id: deploy
         uses: .
         with:
-          appID: app_00000000-0000-0000-0000-000000000000
-          logFile: ${{ github.workspace }}/logs/clever-cloud-deploy.log
+          alias: my-app-alias
         continue-on-error: true
 
       - name: Assert action ran and failed (not skipped or misconfigured)
@@ -40,4 +37,4 @@ jobs:
             echo "FAIL: expected outcome 'failure' but got '$OUTCOME'"
             exit 1
           fi
-          echo "PASS: action ran with logFile input and failed as expected without credentials"
+          echo "PASS: action ran with alias input and failed as expected without credentials"

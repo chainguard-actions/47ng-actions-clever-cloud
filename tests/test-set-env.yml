@@ -1,15 +1,25 @@
-name: Test setEnv input for extra environment variables
+name: Test setEnv input
 on:
   workflow_dispatch:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_REF: refs/heads/main
-      GITHUB_EVENT_NAME: push
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - name: Test action with setEnv input (expect failure without credentials)
+        with:
+          fetch-depth: 0
+
+      - name: Set up a git origin reachable inside the Docker container
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          rm -rf "$GITHUB_WORKSPACE/.git-remote"
+          git init --bare "$GITHUB_WORKSPACE/.git-remote"
+          git push "$GITHUB_WORKSPACE/.git-remote" HEAD:refs/heads/act-harness
+          git remote set-url origin "$GITHUB_WORKSPACE/.git-remote" 2>/dev/null || \
+            git remote add origin "$GITHUB_WORKSPACE/.git-remote"
+
+      - name: Run action with setEnv (expect failure due to missing credentials)
         id: deploy
         uses: .
         with:
@@ -17,18 +27,17 @@ jobs:
           setEnv: |
             MY_VAR=hello
             ANOTHER_VAR=world
-        env:
-          CLEVER_TOKEN: fake-token
-          CLEVER_SECRET: fake-secret
         continue-on-error: true
-      - name: Assert action was invoked and failed due to auth (not config)
+
+      - name: Assert action ran with setEnv and failed gracefully
         env:
           OUTCOME: ${{ steps.deploy.outcome }}
         run: |
           echo "outcome: $OUTCOME"
-          # The action should fail (invalid credentials), not skip or be misconfigured
+          # The action should fail (no valid Clever Cloud credentials),
+          # but it must have run (outcome is 'failure', not 'skipped' or empty)
           if [ "$OUTCOME" != "failure" ]; then
-            echo "FAIL: expected action to fail with invalid credentials, got: $OUTCOME"
+            echo "FAIL: expected outcome 'failure' but got '$OUTCOME'"
             exit 1
           fi
-          echo "PASS: action was invoked with setEnv and failed as expected"
+          echo "PASS: action ran with setEnv and failed as expected without credentials"

@@ -6,16 +6,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-      - id: action
+        with:
+          fetch-depth: 0
+
+      - name: Set up a git origin reachable inside the Docker container
+        run: |
+          git config user.email "test@example.com"
+          git config user.name "Test User"
+          rm -rf "$GITHUB_WORKSPACE/.git-remote"
+          git init --bare "$GITHUB_WORKSPACE/.git-remote"
+          git push "$GITHUB_WORKSPACE/.git-remote" HEAD:refs/heads/act-harness
+          git remote set-url origin "$GITHUB_WORKSPACE/.git-remote" 2>/dev/null || \
+            git remote add origin "$GITHUB_WORKSPACE/.git-remote"
+
+      - name: Run action with timeout input (expect failure due to missing credentials)
+        id: deploy
         uses: .
-        continue-on-error: true
         with:
           appID: app_00000000-0000-0000-0000-000000000000
-          timeout: '30'
+          timeout: '60'
+        continue-on-error: true
+
+      - name: Assert action ran and failed (not skipped or misconfigured)
         env:
-          CLEVER_TOKEN: fake-token
-          CLEVER_SECRET: fake-secret
-      - name: Assert action ran with timeout input
+          OUTCOME: ${{ steps.deploy.outcome }}
         run: |
-          echo "Action completed (with or without error due to fake credentials)"
-          echo "PASS: timeout input was accepted"
+          echo "outcome: $OUTCOME"
+          # The action should fail (no valid Clever Cloud credentials),
+          # but it must have run (outcome is 'failure', not 'skipped' or empty)
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected outcome 'failure' but got '$OUTCOME'"
+            exit 1
+          fi
+          echo "PASS: action ran with timeout input and failed as expected without credentials"
