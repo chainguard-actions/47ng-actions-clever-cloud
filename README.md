@@ -18,6 +18,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v2.1.4 | [`v2.1.4`](https://github.com/chainguard-actions/47ng-actions-clever-cloud/tree/v2.1.4) | [`ad106a5`](https://github.com/47ng/actions-clever-cloud/commit/ad106a5ffc2fe917ae91e118b098d90a4eee3a6e) | [`HARDENING.md`](https://github.com/chainguard-actions/47ng-actions-clever-cloud/blob/v2.1.4/HARDENING.md) |
 | v2.1.5 | [`v2.1.5`](https://github.com/chainguard-actions/47ng-actions-clever-cloud/tree/v2.1.5) | [`3c87006`](https://github.com/47ng/actions-clever-cloud/commit/3c8700668075dc5fb531ebbd7f7d86dd41f97175) | [`HARDENING.md`](https://github.com/chainguard-actions/47ng-actions-clever-cloud/blob/v2.1.5/HARDENING.md) |
 | v2.2.0 | [`v2.2.0`](https://github.com/chainguard-actions/47ng-actions-clever-cloud/tree/v2.2.0) | [`6029f49`](https://github.com/47ng/actions-clever-cloud/commit/6029f491cd1ae7942b1053c467fddf993a6a9aa4) | [`HARDENING.md`](https://github.com/chainguard-actions/47ng-actions-clever-cloud/blob/v2.2.0/HARDENING.md) |
+| v2.3.0 | [`v2.3.0`](https://github.com/chainguard-actions/47ng-actions-clever-cloud/tree/v2.3.0) | [`1a380d0`](https://github.com/47ng/actions-clever-cloud/commit/1a380d04c3b9ccee6b1d99fe7f725e1d706d5e9d) | [`HARDENING.md`](https://github.com/chainguard-actions/47ng-actions-clever-cloud/blob/v2.3.0/HARDENING.md) |
 
 ## Privacy
 
