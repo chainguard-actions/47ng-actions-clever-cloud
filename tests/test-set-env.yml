@@ -1,0 +1,39 @@
+name: Test setEnv input with unknown alias
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+      - id: action
+        uses: .
+        continue-on-error: true
+        env:
+          CLEVER_TOKEN: dummy-token-value
+          CLEVER_SECRET: dummy-secret-value
+        with:
+          alias: nonexistent-app-alias
+          timeout: '60'
+          setEnv: |
+            FOO=bar
+            QUOTED="hello world"
+            # a comment line
+      - name: Assert action failed (dummy credentials, unknown alias)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          TIMED_OUT: ${{ steps.action.outputs.timedOut }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "timedOut: $TIMED_OUT"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected failure with dummy credentials and unknown alias"
+            exit 1
+          fi
+          if [ "$TIMED_OUT" = "true" ]; then
+            echo "FAIL: timedOut should not be true"
+            exit 1
+          fi
+          echo "PASS"

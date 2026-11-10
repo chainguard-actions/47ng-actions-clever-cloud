@@ -1,0 +1,83 @@
+# Clever Cloud E2E operations
+
+## Protected environment
+
+Create a protected GitHub Environment named `clever-cloud-e2e`.
+Require reviewer approval before the job starts.
+
+Add these environment secrets:
+
+- `CLEVER_TOKEN`
+- `CLEVER_SECRET`
+
+Add this environment variable if you need a region other than the default:
+
+- `CLEVER_E2E_REGION` (defaults to `par` when unset)
+
+The workflow creates apps in the authenticated user's personal account.
+It does not pass an organisation owner.
+
+## Manual dispatch
+
+Run `.github/workflows/e2e-manual.yml` from `master`. The workflow rejects a dispatch from any other ref.
+Pass the full 40-character internal pull request head SHA as `head_sha`.
+The workflow resolves that SHA to exactly one open pull request in this repository, and rejects closed pull requests, fork pull requests, and SHAs that are no longer the head of an open pull request.
+After approval, it checks the pull request head again before app creation.
+
+## Candidate setup
+
+The reusable job checks out the candidate source with persisted credentials disabled.
+It installs dependencies with `pnpm install --frozen-lockfile --ignore-scripts`.
+Host control uses the candidate's locked Clever Tools binary at `.candidate-source/node_modules/.bin/clever`.
+No step calls `clever login`.
+
+After the first healthy deploy, the suite generates one random 16-byte base64 value,
+checks that it keeps its `==` padding, sends it through `setEnv`, and compares the
+public and remote values without printing it.
+The suite never records the raw generated health value in the summary, and redacts it
+from uploaded failure evidence with the Clever credentials.
+The same deployment runs with `quiet: true` and writes raw output to a log file so the
+suite can check the fixture build and startup markers.
+
+Each proceeded reusable run also writes a GitHub step summary.
+That summary includes the caller, the exact candidate head SHA, the pinned candidate image digest,
+the pinned candidate image reference, safe app identity, teardown outcome, failure-evidence status,
+and one row per scenario with its outcome, commit, deployment, and candidate log path.
+
+## App naming
+
+Each run creates one app named `actions-clever-cloud-e2e-<run-id>-<attempt>`.
+The workflow reports success only after it captures a valid `app_...` ID from Clever Cloud.
+
+## Failure evidence
+
+A failed reusable run prepares redacted failure evidence before teardown, then uploads one artifact named `clever-cloud-e2e-failure-<run-id>-<attempt>`, kept for 3 days.
+Download that artifact from the workflow run page if you need to inspect a live failure after the app has been deleted.
+It contains:
+
+- `suite-results.json` with the exact candidate head SHA, the pinned candidate image digest and reference, scenario outcomes, app identity, commit IDs, deployment IDs, and candidate action log paths
+- `candidate-action/*.log` for any captured candidate action logs, including `001-deploy-healthy.log` through `012-timeout.log`
+
+If evidence preparation fails its redaction scan for the token, secret, or generated health value, the workflow skips the upload and fails the run so you can inspect the job log instead.
+
+## Teardown and manual cleanup
+
+Teardown always targets the captured app ID.
+It loops until no deployment is still active, waiting for each latest deployment to reach `WIP`, cancelling it, then deleting the app by exact ID and checking that the app no longer appears in Clever Cloud.
+If cleanup fails, the workflow reports the exact app name and ID so you can remove it by hand.
+
+The suite job is capped at 30 minutes, and its long-running steps carry their own caps, so a hung step fails on its own and teardown still runs on a normal budget rather than a cancellation grace window.
+That is the point of the step caps, protecting cleanup.
+Teardown's own step cap is 15 minutes, and the cancel-and-settle loop inside `deleteApplication` has its own 10-minute budget (`DEFAULT_SETTLE_TIMEOUT_MS` in `src/e2e/clever-client.ts`), after which it gives up and reports.
+A hang arriving late in the run can still push the job into its 30-minute cap during teardown, so a run that shows as cancelled by timeout rather than failed may never have written the app name and ID report.
+Skip straight to the manual cleanup commands below in that case.
+
+For manual recovery, first download the failure evidence artifact if one exists.
+`clever cancel-deploy` reports `There is no ongoing deployment for this application` both when a deployment is genuinely in flight but not yet in a cancellable state, and when there is nothing left to cancel at all, including right after a cancellation has already replaced the deploy row.
+Retry briefly if you expect a deployment to still be running, and otherwise go straight to the delete command below.
+Then use the reported app ID with Clever Tools from a trusted shell:
+
+```bash
+clever cancel-deploy --app <app-id>
+clever delete --app <app-id> --yes
+```
